@@ -5,6 +5,7 @@ use std::io::Write;
 
 pub fn turn_tv_on() {
     // active source
+    send_command(&["-s", "-t0", "--image-view-on"]);
     send_command(&["-s", "-t0", "--active-source", "phys-addr=2.0.0.0"]);
 }
 pub fn turn_tv_off() {
