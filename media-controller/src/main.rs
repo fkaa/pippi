@@ -37,6 +37,8 @@ fn main() {
             Message::Ir(RemoteButton::Ok) => vlc_tx.send(MediaCommand::TogglePlay).unwrap(),
             Message::Ir(RemoteButton::Up) => vlc_tx.send(MediaCommand::VolumeUp).unwrap(),
             Message::Ir(RemoteButton::Down) => vlc_tx.send(MediaCommand::VolumeDown).unwrap(),
+            Message::Ir(RemoteButton::Left) => vlc_tx.send(MediaCommand::Seek{ seconds: -15 }).unwrap(),
+            Message::Ir(RemoteButton::Right) => vlc_tx.send(MediaCommand::Seek{ seconds: 15 }).unwrap(),
             _ => {}
         }
     }

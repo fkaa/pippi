@@ -10,6 +10,7 @@ pub enum MediaCommand {
     TogglePlay,
     VolumeUp,
     VolumeDown,
+    Seek { seconds: i32 },
     StartMedia { path: String },
 }
 
@@ -37,7 +38,7 @@ fn vlc_loop(rx: mpsc::Receiver<MediaCommand>) {
         match cmd {
             MediaCommand::StartMedia { path } => {
                 vlc.clear();
-                vlc.enqueue("/home/tmtu/dev/clown-escape/clown-escape/assets/sfx/rats.wav");
+                vlc.enqueue(&path);
                 let duration = vlc.get_duration();
 
                 vlc.play()
@@ -50,6 +51,10 @@ fn vlc_loop(rx: mpsc::Receiver<MediaCommand>) {
             }
             MediaCommand::VolumeDown => {
                 vlc.vol_down(10);
+            }
+            MediaCommand::Seek { seconds } => {
+                let time = vlc.get_time().as_secs() as i32;
+                vlc.seek(time + seconds);
             }
         }
     }
@@ -100,6 +105,10 @@ impl VlcPipe {
     }
     pub fn pause(&mut self) {
         self.writer.write_all(b"pause").unwrap();
+        self.read_line();
+    }
+    pub fn seek(&mut self, seconds: i32) {
+        write!(&mut self.writer, "seek {}\n", seconds).unwrap();
         self.read_line();
     }
     pub fn vol_down(&mut self, step: u32) {

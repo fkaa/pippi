@@ -72,6 +72,8 @@ fn monitor_remote_fn(sender: mpsc::Sender<Message>) {
                 if let Some(mapped) = mapping.get(&ir_value) {
                     sender.send(Message::Ir(*mapped)).unwrap();
                 }
+                bits_read = 0;
+                ir_value = 0;
                 //println!("> 0x{:08x}", ir_value);
             }
         }
