@@ -1,4 +1,5 @@
-use std::thread;
+use std::default;
+use std::{collections::HashMap, thread};
 use std::time::Duration;
 use std::sync::mpsc;
 
@@ -10,15 +11,62 @@ mod cd;
 mod ui;
 
 use dvd_monitor::DiskReaderEvent;
+use glutin::surface::GlSurface;
 use vlc::MediaCommand;
+use winit::event::WindowEvent;
+use winit::window::WindowId;
+use winit::{application::ApplicationHandler, event_loop::{ControlFlow, EventLoop, EventLoopBuilder}};
 
-#[derive(Debug)]
+use crate::ui::{UiWindow, WindowState};
+use crate::ui::welcome_window::WelcomeWindow;
+
+#[derive(Debug, Default)]
 pub enum Message {
+    #[default]
+    None,
     Disk(dvd_monitor::DiskReaderEvent),
     Ir(ir_remote_monitor::RemoteButton),
 }
 
+#[derive(Default)]
+struct MediaControlApp {
+    windows: HashMap<WindowId, WindowState>,
+}
+
+impl ApplicationHandler<Message> for MediaControlApp {
+    fn resumed(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
+        let window: WindowState = ui::create_gl_window::<WelcomeWindow>(event_loop, (200, 200));
+
+        self.windows.insert(window.window.id(), window);
+    }
+
+    fn window_event(
+        &mut self,
+        event_loop: &winit::event_loop::ActiveEventLoop,
+        window_id: winit::window::WindowId,
+        event: WindowEvent,
+    ) {
+        let Some(mut window) = self.windows.get_mut(&window_id) else {
+            return;
+        };
+
+        match event {
+            WindowEvent::RedrawRequested => {
+                window.app.draw(&mut window.canvas);
+                window.canvas.flush_to_surface(&());
+                window.surface.swap_buffers(&window.context).unwrap();
+            }
+            _ => {}
+        }
+    }
+}
+
 fn main() {
+    let event_loop: EventLoop<Message> = EventLoopBuilder::default().build().unwrap();
+    event_loop.set_control_flow(ControlFlow::Poll);
+
+    let mut app = MediaControlApp::default();
+    event_loop.run_app(&mut app).unwrap();
     /*let (tx, rx) = mpsc::channel();
     dvd_monitor::monitor_disk_reader(tx.clone());
     let vlc_tx = vlc::start_controller(tx.clone());
