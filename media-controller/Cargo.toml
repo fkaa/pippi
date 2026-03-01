@@ -7,6 +7,8 @@ edition = "2024"
 anyhow = "1.0.101"
 cec-rs = "12.0.1"
 discid = "0.7.0"
+femtovg = { version = "0.20.4", features = ["glutin"] }
+glutin = "0.32.3"
 gpio-cdev = "0.6.0"
 libcec-sys = { default-features = false, version = "*" }
 mio = "1.1.1"

@@ -7,6 +7,7 @@ mod ir_remote_monitor;
 mod hdmi_cec;
 mod vlc;
 mod cd;
+mod ui;
 
 use dvd_monitor::DiskReaderEvent;
 use vlc::MediaCommand;
@@ -18,7 +19,7 @@ pub enum Message {
 }
 
 fn main() {
-    let (tx, rx) = mpsc::channel();
+    /*let (tx, rx) = mpsc::channel();
     dvd_monitor::monitor_disk_reader(tx.clone());
     let vlc_tx = vlc::start_controller(tx.clone());
     //ir_remote_monitor::monitor_remote(tx.clone());
@@ -41,5 +42,5 @@ fn main() {
             Message::Ir(RemoteButton::Right) => vlc_tx.send(MediaCommand::Seek{ seconds: 15 }).unwrap(),
             _ => {}
         }
-    }
+    }*/
 }
