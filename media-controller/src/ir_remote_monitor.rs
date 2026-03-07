@@ -1,7 +1,7 @@
 use gpio_cdev::{Chip, EventRequestFlags, EventType, LineRequestFlags};
+use std::collections::HashMap;
 use std::sync::mpsc;
 use std::thread;
-use std::collections::HashMap;
 
 use crate::Message;
 

@@ -1,7 +1,7 @@
-use cec_rs::{CecConnectionCfgBuilder, CecLogicalAddress, CecDeviceTypeVec, CecDeviceType};
-use std::process::Command;
+use cec_rs::{CecConnectionCfgBuilder, CecDeviceType, CecDeviceTypeVec, CecLogicalAddress};
 use std::io;
 use std::io::Write;
+use std::process::Command;
 
 pub fn turn_tv_on() {
     // active source

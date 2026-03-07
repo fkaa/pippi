@@ -1,4 +1,3 @@
-
 pub enum CdInfo {
     Cd {
         album: String,
@@ -7,7 +6,7 @@ pub enum CdInfo {
     },
     Dvd {
         title: String,
-    }
+    },
 }
 
 pub struct Track {
@@ -15,6 +14,5 @@ pub struct Track {
 }
 
 pub fn scan() -> Option<CdInfo> {
-
     todo!()
 }

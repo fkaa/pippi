@@ -6,7 +6,7 @@ use std::thread;
 
 use crate::Message;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum DiskReaderEvent {
     Inserted { is_audio: bool },
     Ejected,
@@ -18,10 +18,7 @@ pub fn monitor_disk_reader(tx: mpsc::Sender<Message>) {
     });
 }
 
-pub fn poll(
-    mut socket: udev::MonitorSocket,
-    sender: mpsc::Sender<Message>,
-) -> io::Result<()> {
+pub fn poll(mut socket: udev::MonitorSocket, sender: mpsc::Sender<Message>) -> io::Result<()> {
     let mut poll = Poll::new()?;
     let mut events = Events::with_capacity(1024);
 
@@ -45,10 +42,14 @@ pub fn poll(
                     let change = e.property_value("DISK_MEDIA_CHANGE");
 
                     if eject.is_some() {
-                        sender.send(Message::Disk(DiskReaderEvent::Ejected)).unwrap();
+                        sender
+                            .send(Message::Disk(DiskReaderEvent::Ejected))
+                            .unwrap();
                     }
                     if change.is_some() {
-                        sender.send(Message::Disk(DiskReaderEvent::Inserted { is_audio: false })).unwrap();
+                        sender
+                            .send(Message::Disk(DiskReaderEvent::Inserted { is_audio: false }))
+                            .unwrap();
                     }
                 }
             }

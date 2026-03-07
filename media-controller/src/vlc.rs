@@ -1,10 +1,11 @@
 use crate::Message;
+use std::io::{BufRead, BufReader, Read, Write};
+use std::net::TcpStream;
+use std::os::unix::net::UnixStream;
+use std::process::{Command, Stdio};
 use std::sync::mpsc;
 use std::thread;
-    use std::process::{Command, Stdio};
-    use std::io::{BufRead, Write, Read, BufReader};
-    use std::os::unix::net::UnixStream;
-    use std::time::Duration;
+use std::time::Duration;
 
 pub enum MediaCommand {
     TogglePlay,
@@ -15,9 +16,7 @@ pub enum MediaCommand {
 }
 
 #[derive(Default)]
-struct VlcState {
-    
-}
+struct VlcState {}
 
 pub fn start_controller(sender: mpsc::Sender<Message>) -> mpsc::Sender<MediaCommand> {
     let (tx, rx) = mpsc::channel();
@@ -61,14 +60,14 @@ fn vlc_loop(rx: mpsc::Receiver<MediaCommand>) {
 }
 
 fn vlc() -> VlcPipe {
-    let mut proc = Command::new("cvlc")
-        .args(&["-I", "rc", "--rc-unix", "test"])
+    let mut proc = Command::new("vlc")
+        .args(&["-I", "cli", "--lua-config", "cli={host='localhost:4212'}"])
         .spawn()
         .expect("Failed to launch cvlc");
 
     thread::sleep(std::time::Duration::from_secs(1));
 
-    let mut socket = UnixStream::connect("test").unwrap();
+    let mut socket = TcpStream::connect("localhost:4212").unwrap();
     let mut reader = BufReader::new(socket.try_clone().unwrap());
 
     let mut pipe = VlcPipe::new(socket, reader);
@@ -77,13 +76,13 @@ fn vlc() -> VlcPipe {
 }
 
 struct VlcPipe {
-    writer: UnixStream,
-    reader: BufReader<UnixStream>,
+    writer: TcpStream,
+    reader: BufReader<TcpStream>,
     line: String,
 }
 
 impl VlcPipe {
-    pub fn new(writer: UnixStream, reader: BufReader<UnixStream>) -> VlcPipe {
+    pub fn new(writer: TcpStream, reader: BufReader<TcpStream>) -> VlcPipe {
         VlcPipe {
             writer,
             reader,
@@ -153,9 +152,9 @@ impl VlcPipe {
         loop {
             self.line.clear();
             self.reader.read_line(&mut self.line).unwrap();
-if !self.line.starts_with("status_change") {
-    break;
-}
+            if !self.line.starts_with("status_change") {
+                break;
+            }
             println!("skipping {:?}", self.line);
         }
     }
