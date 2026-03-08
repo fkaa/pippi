@@ -9,7 +9,7 @@ use crate::Message;
 #[derive(Debug, Clone)]
 pub enum DiskType {
     Dvd,
-    Cd { disc_id: String }
+    Cd { disc_id: String },
 }
 
 #[derive(Debug, Clone)]
@@ -20,7 +20,7 @@ pub enum DiskReaderEvent {
 
 pub fn monitor_disk_reader(tx: mpsc::Sender<Message>) {
     thread::spawn(move || {
-        monitor_cd_drive_fn(tx).unwrap();
+        monitor_cd_drive_fn(tx);
     });
 }
 

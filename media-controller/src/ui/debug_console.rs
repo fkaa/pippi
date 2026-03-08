@@ -36,7 +36,13 @@ impl UiWindow for DebugConsoleWindow {
         }
     }
 
-    fn on_message(&mut self, message: &Message, _window: &Window, _proxy: &EventLoopProxy<Message>) -> bool {
+    fn on_message(
+        &mut self,
+        message: &Message,
+        _window: &Window,
+        _canvas: &mut Canvas<OpenGl>,
+        _proxy: &EventLoopProxy<Message>,
+    ) -> bool {
         self.messages.push(message.clone());
         false
     }

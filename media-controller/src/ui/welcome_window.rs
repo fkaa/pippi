@@ -1,6 +1,9 @@
 use femtovg::{Canvas, Color, Paint, renderer::OpenGl};
 
-use crate::{Message, ui::{FONT_ROBOTO_BOLD, FONT_ROBOTO_LIGHT, FONT_ROBOTO_REGULAR, Fonts, UiWindow}};
+use crate::{
+    Message,
+    ui::{FONT_ROBOTO_BOLD, FONT_ROBOTO_LIGHT, FONT_ROBOTO_REGULAR, Fonts, UiWindow},
+};
 
 pub struct WelcomeWindow {
     fonts: Fonts,
@@ -41,18 +44,24 @@ impl UiWindow for WelcomeWindow {
         WelcomeWindow { fonts }
     }
 
-    fn on_message(&mut self, message: &crate::Message, window: &winit::window::Window, _proxy: &winit::event_loop::EventLoopProxy<crate::Message>) -> bool {
+    fn on_message(
+        &mut self,
+        message: &crate::Message,
+        window: &winit::window::Window,
+        _canvas: &mut Canvas<OpenGl>,
+        _proxy: &winit::event_loop::EventLoopProxy<crate::Message>,
+    ) -> bool {
         let Message::Disk(disk) = message else {
-return false;
+            return false;
         };
 
         match disk {
             crate::dvd_monitor::DiskReaderEvent::Inserted(..) => {
                 window.set_visible(false);
-            },
+            }
             crate::dvd_monitor::DiskReaderEvent::Ejected => {
                 window.set_visible(true);
-            },
+            }
         }
 
         false

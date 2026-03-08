@@ -10,6 +10,7 @@ mod ui;
 mod vlc;
 
 use dvd_monitor::DiskReaderEvent;
+use enigo::{Enigo, Settings};
 use glutin::prelude::PossiblyCurrentGlContext;
 use glutin::surface::GlSurface;
 use vlc::MediaCommand;
@@ -21,13 +22,11 @@ use winit::{
     application::ApplicationHandler,
     event_loop::{ControlFlow, EventLoop, EventLoopBuilder},
 };
-        use enigo::{
-    Enigo, Settings,
-};
 
 use crate::cd::{CdMetadataFetcher, DiscMetadata};
 use crate::dvd_monitor::DiskType;
 use crate::ui::debug_console::DebugConsoleWindow;
+use crate::ui::lyrics_app::LyricsApp;
 use crate::ui::prompt_window::PromptWindow;
 use crate::ui::welcome_window::WelcomeWindow;
 use crate::ui::{UiWindow, WindowState};
@@ -48,7 +47,7 @@ pub enum Message {
         current_choice: i32,
     },
     ListPromptChosen(i32),
-    DiskMetadata(Option<DiscMetadata>)
+    DiskMetadata(Option<DiscMetadata>),
 }
 
 enum WindowPos {
@@ -100,6 +99,7 @@ struct MediaControlApp {
     debug_window: WindowId,
     welcome_window: WindowId,
     prompt_window: WindowId,
+    lyrics_app: WindowId,
     vlc_tx: Sender<MediaCommand>,
     proxy: EventLoopProxy<Message>,
     enigo: Enigo,
@@ -110,17 +110,22 @@ impl MediaControlApp {
     fn new(vlc_tx: Sender<MediaCommand>, proxy: EventLoopProxy<Message>) -> Self {
         let enigo = Enigo::new(&Settings::default()).unwrap();
 
-        let metadata_tx = CdMetadataFetcher::with_cache_dir(PathBuf::from("./cache"), proxy.clone());
+        let metadata_tx = CdMetadataFetcher::with_cache_dir(
+            PathBuf::from("./cache"),
+            PathBuf::from("./lyrics.sqlite3"),
+            proxy.clone(),
+        );
 
         Self {
             windows: Default::default(),
             debug_window: WindowId::dummy(),
             welcome_window: WindowId::dummy(),
             prompt_window: WindowId::dummy(),
+            lyrics_app: WindowId::dummy(),
             vlc_tx,
             proxy,
             enigo,
-            metadata_tx
+            metadata_tx,
         }
     }
 
@@ -140,7 +145,11 @@ impl MediaControlApp {
     }
 
     fn show_window(&mut self, window_id: &WindowId, visible: bool) {
-        let Some(window) = self.windows.iter_mut().find(|w| w.window.id() == *window_id) else {
+        let Some(window) = self
+            .windows
+            .iter_mut()
+            .find(|w| w.window.id() == *window_id)
+        else {
             return;
         };
 
@@ -150,12 +159,14 @@ impl MediaControlApp {
 
 impl ApplicationHandler<Message> for MediaControlApp {
     fn resumed(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
-        self.debug_window =
-            self.add_window::<DebugConsoleWindow>(event_loop, (300, 400), WindowPos::TopLeft);
-        self.welcome_window =
-            self.add_window::<WelcomeWindow>(event_loop, (500, 120), WindowPos::Center);
-        self.prompt_window =
-            self.add_window::<PromptWindow>(event_loop, (400, 160), WindowPos::Bottom);
+        // self.debug_window =
+        //     self.add_window::<DebugConsoleWindow>(event_loop, (300, 400), WindowPos::TopLeft);
+        // self.welcome_window =
+        //     self.add_window::<WelcomeWindow>(event_loop, (500, 120), WindowPos::Center);
+        // self.prompt_window =
+        //     self.add_window::<PromptWindow>(event_loop, (400, 160), WindowPos::Bottom);
+        self.lyrics_app =
+            self.add_window::<LyricsApp>(event_loop, (1280, 1024), WindowPos::TopLeft);
     }
 
     fn window_event(
@@ -185,7 +196,7 @@ impl ApplicationHandler<Message> for MediaControlApp {
 
         let mut event_handled = false;
         for window in &mut self.windows {
-            if window.app.on_message(&event, &*window.window, &self.proxy) {
+            if window.app.on_message(&event, &*window.window, &mut window.canvas, &self.proxy) {
                 event_handled = true;
                 break;
             }
@@ -197,19 +208,21 @@ impl ApplicationHandler<Message> for MediaControlApp {
 
         use ir_remote_monitor::RemoteButton;
         match event {
+            Message::DiskMetadata(metadata) => {
+                self.vlc_tx
+                    .send(MediaCommand::StartMedia {
+                        path: "cdda:///dev/sr0".into(),
+                    })
+                    .unwrap();
+            }
             Message::Disk(DiskReaderEvent::Inserted(disk)) => {
                 match disk {
                     DiskType::Dvd => todo!(),
-                    DiskType::Cd { disc_id: _ } => {
-                        
-                    },
+                    DiskType::Cd { disc_id } => {
+                        self.metadata_tx.send(disc_id).unwrap();
+                    }
                 }
                 // let cd_info = cd::scan();
-                self.vlc_tx
-                    .send(MediaCommand::StartMedia {
-                        path: "dvdsimple:///dev/sr0".into(),
-                    })
-                    .unwrap();
             }
             Message::Ir(RemoteButton::Star) => hdmi_cec::turn_tv_on(),
             Message::Ir(RemoteButton::Hash) => hdmi_cec::turn_tv_off(),
@@ -238,19 +251,22 @@ fn main() {
     dbg!(vlc.is_playing());
 
     loop{}*/
-    
+
     let (tx, rx) = mpsc::channel();
     dvd_monitor::monitor_disk_reader(tx.clone());
     //ir_remote_monitor::monitor_remote(tx.clone());
 
     let vlc_tx: Sender<MediaCommand> = vlc::start_controller(tx.clone());
 
-    tx.send(Message::Disk(DiskReaderEvent::Inserted(DiskType::Cd { disc_id: "VWZknAOJGo_RCbXvLKoOO.SwIaE-".into() }))).unwrap();
-    tx.send(Message::SetPrompt {
-        prompt: "Vill du börja där du slutade?".into(),
-    }).unwrap();
-    tx.send(Message::Ir(ir_remote_monitor::RemoteButton::Left)).unwrap();
-    tx.send(Message::Ir(ir_remote_monitor::RemoteButton::Ok)).unwrap();
+    tx.send(Message::Disk(DiskReaderEvent::Inserted(DiskType::Cd {
+        disc_id: "VWZknAOJGo_RCbXvLKoOO.SwIaE-".into(),
+    })))
+    .unwrap();
+    // tx.send(Message::SetPrompt {
+    //     prompt: "Vill du börja där du slutade?".into(),
+    // }).unwrap();
+    // tx.send(Message::Ir(ir_remote_monitor::RemoteButton::Left)).unwrap();
+    // tx.send(Message::Ir(ir_remote_monitor::RemoteButton::Ok)).unwrap();
 
     // event loop
     let event_loop: EventLoop<Message> = EventLoopBuilder::default().build().unwrap();

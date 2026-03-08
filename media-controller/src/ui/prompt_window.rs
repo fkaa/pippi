@@ -75,7 +75,13 @@ impl UiWindow for PromptWindow {
             .unwrap();
     }
 
-    fn on_message(&mut self, message: &Message, window: &Window, proxy: &EventLoopProxy<Message>) -> bool {
+    fn on_message(
+        &mut self,
+        message: &Message,
+        window: &Window,
+        _canvas: &mut Canvas<OpenGl>,
+        proxy: &EventLoopProxy<Message>,
+    ) -> bool {
         if let Message::SetPrompt { prompt } = message {
             self.prompt = prompt.to_string();
             window.set_visible(true);
