@@ -1,8 +1,7 @@
 use crate::Message;
-use std::io::{BufRead, BufReader, Read, Write};
+use std::io::{BufRead, BufReader, Write};
 use std::net::TcpStream;
-use std::os::unix::net::UnixStream;
-use std::process::{Command, Stdio};
+use std::process::Command;
 use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
@@ -18,7 +17,7 @@ pub enum MediaCommand {
 #[derive(Default)]
 struct VlcState {}
 
-pub fn start_controller(sender: mpsc::Sender<Message>) -> mpsc::Sender<MediaCommand> {
+pub fn start_controller(_sender: mpsc::Sender<Message>) -> mpsc::Sender<MediaCommand> {
     let (tx, rx) = mpsc::channel();
 
     thread::spawn(move || {
@@ -29,7 +28,7 @@ pub fn start_controller(sender: mpsc::Sender<Message>) -> mpsc::Sender<MediaComm
 }
 
 fn vlc_loop(rx: mpsc::Receiver<MediaCommand>) {
-    let mut state = VlcState::default();
+    let _state = VlcState::default();
 
     let mut vlc = vlc();
 
@@ -38,7 +37,7 @@ fn vlc_loop(rx: mpsc::Receiver<MediaCommand>) {
             MediaCommand::StartMedia { path } => {
                 vlc.clear();
                 vlc.enqueue(&path);
-                let duration = vlc.get_duration();
+                let _duration = vlc.get_duration();
 
                 vlc.play()
             }
@@ -60,17 +59,17 @@ fn vlc_loop(rx: mpsc::Receiver<MediaCommand>) {
 }
 
 pub fn vlc() -> VlcPipe {
-    let mut proc = Command::new("vlc")
+    let _proc = Command::new("vlc")
         .args(&["-I", "cli", "--lua-config", "cli={host='localhost:4212'}"])
         .spawn()
         .expect("Failed to launch cvlc");
 
     thread::sleep(std::time::Duration::from_secs(1));
 
-    let mut socket = TcpStream::connect("localhost:4212").unwrap();
-    let mut reader = BufReader::new(socket.try_clone().unwrap());
+    let socket = TcpStream::connect("localhost:4212").unwrap();
+    let reader = BufReader::new(socket.try_clone().unwrap());
 
-    let mut pipe = VlcPipe::new(socket, reader);
+    let pipe = VlcPipe::new(socket, reader);
 
     pipe
 }

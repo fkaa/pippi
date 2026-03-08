@@ -1,8 +1,6 @@
-use std::default;
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Sender};
-use std::time::Duration;
-use std::{collections::HashMap, thread};
+use std::thread;
 
 mod cd;
 mod dvd_monitor;
@@ -17,16 +15,14 @@ use glutin::surface::GlSurface;
 use vlc::MediaCommand;
 use winit::dpi::PhysicalPosition;
 use winit::event::WindowEvent;
-use winit::event_loop::{self, ActiveEventLoop, EventLoopProxy};
+use winit::event_loop::{ActiveEventLoop, EventLoopProxy};
 use winit::window::{Window, WindowId};
 use winit::{
     application::ApplicationHandler,
     event_loop::{ControlFlow, EventLoop, EventLoopBuilder},
 };
         use enigo::{
-    Button, Coordinate,
-    Direction::{Click, Press, Release},
-    Enigo, Key, Keyboard, Mouse, Settings,
+    Enigo, Settings,
 };
 
 use crate::cd::{CdMetadataFetcher, DiscMetadata};
@@ -112,7 +108,7 @@ struct MediaControlApp {
 
 impl MediaControlApp {
     fn new(vlc_tx: Sender<MediaCommand>, proxy: EventLoopProxy<Message>) -> Self {
-        let mut enigo = Enigo::new(&Settings::default()).unwrap();
+        let enigo = Enigo::new(&Settings::default()).unwrap();
 
         let metadata_tx = CdMetadataFetcher::with_cache_dir(PathBuf::from("./cache"), proxy.clone());
 
@@ -144,7 +140,7 @@ impl MediaControlApp {
     }
 
     fn show_window(&mut self, window_id: &WindowId, visible: bool) {
-        let Some(mut window) = self.windows.iter_mut().find(|w| w.window.id() == *window_id) else {
+        let Some(window) = self.windows.iter_mut().find(|w| w.window.id() == *window_id) else {
             return;
         };
 
@@ -164,11 +160,11 @@ impl ApplicationHandler<Message> for MediaControlApp {
 
     fn window_event(
         &mut self,
-        event_loop: &winit::event_loop::ActiveEventLoop,
+        _event_loop: &winit::event_loop::ActiveEventLoop,
         window_id: winit::window::WindowId,
         event: WindowEvent,
     ) {
-        let Some(mut window) = self.windows.iter_mut().find(|w| w.window.id() == window_id) else {
+        let Some(window) = self.windows.iter_mut().find(|w| w.window.id() == window_id) else {
             println!("unknown window");
             return;
         };
@@ -184,7 +180,7 @@ impl ApplicationHandler<Message> for MediaControlApp {
         }
     }
 
-    fn user_event(&mut self, event_loop: &ActiveEventLoop, event: Message) {
+    fn user_event(&mut self, _event_loop: &ActiveEventLoop, event: Message) {
         println!("{:?}", event);
 
         let mut event_handled = false;
@@ -204,7 +200,7 @@ impl ApplicationHandler<Message> for MediaControlApp {
             Message::Disk(DiskReaderEvent::Inserted(disk)) => {
                 match disk {
                     DiskType::Dvd => todo!(),
-                    DiskType::Cd { disc_id } => {
+                    DiskType::Cd { disc_id: _ } => {
                         
                     },
                 }
@@ -249,12 +245,12 @@ fn main() {
 
     let vlc_tx: Sender<MediaCommand> = vlc::start_controller(tx.clone());
 
-    tx.send(Message::Disk(DiskReaderEvent::Inserted(DiskType::Cd { disc_id: "VWZknAOJGo_RCbXvLKoOO.SwIaE-".into() })));
+    tx.send(Message::Disk(DiskReaderEvent::Inserted(DiskType::Cd { disc_id: "VWZknAOJGo_RCbXvLKoOO.SwIaE-".into() }))).unwrap();
     tx.send(Message::SetPrompt {
         prompt: "Vill du börja där du slutade?".into(),
-    });
-    tx.send(Message::Ir(ir_remote_monitor::RemoteButton::Left));
-    tx.send(Message::Ir(ir_remote_monitor::RemoteButton::Ok));
+    }).unwrap();
+    tx.send(Message::Ir(ir_remote_monitor::RemoteButton::Left)).unwrap();
+    tx.send(Message::Ir(ir_remote_monitor::RemoteButton::Ok)).unwrap();
 
     // event loop
     let event_loop: EventLoop<Message> = EventLoopBuilder::default().build().unwrap();

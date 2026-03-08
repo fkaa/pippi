@@ -1,4 +1,4 @@
-use femtovg::{Canvas, Color, FontId, Paint, Path, renderer::OpenGl};
+use femtovg::{Canvas, Color, Paint, Path, renderer::OpenGl};
 use winit::{event_loop::EventLoopProxy, window::Window};
 
 use crate::{
@@ -32,7 +32,7 @@ impl UiWindow for PromptWindow {
             .with_text_align(femtovg::Align::Center)
             .with_text_baseline(femtovg::Baseline::Top);
 
-        let x = 0.0;
+        let _x = 0.0;
         let mut y = 20.0;
 
         let metrics = canvas.fill_text(w / 2.0, y, &self.prompt, &paint).unwrap();

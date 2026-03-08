@@ -20,7 +20,7 @@ pub enum DiskReaderEvent {
 
 pub fn monitor_disk_reader(tx: mpsc::Sender<Message>) {
     thread::spawn(move || {
-        monitor_cd_drive_fn(tx);
+        monitor_cd_drive_fn(tx).unwrap();
     });
 }
 
@@ -60,23 +60,6 @@ pub fn poll(mut socket: udev::MonitorSocket, sender: mpsc::Sender<Message>) -> i
                 }
             }
         }
-    }
-}
-
-fn print_event(event: udev::Event) {
-    println!(
-        "{}: {} {} (subsystem={}, sysname={}, devtype={})",
-        event.sequence_number(),
-        event.event_type(),
-        event.syspath().to_str().unwrap_or("---"),
-        event
-            .subsystem()
-            .map_or("", |s| { s.to_str().unwrap_or("") }),
-        event.sysname().to_str().unwrap_or(""),
-        event.devtype().map_or("", |s| { s.to_str().unwrap_or("") })
-    );
-    for property in event.properties() {
-        println!("PROP {:?} = {:?}", property.name(), property.value());
     }
 }
 

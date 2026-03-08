@@ -33,7 +33,7 @@ pub trait UiWindow {
     fn create(canvas: &mut Canvas<OpenGl>) -> Self
     where
         Self: Sized;
-    fn on_message(&mut self, message: &Message, window: &Window, proxy: &EventLoopProxy<Message>) -> bool {
+    fn on_message(&mut self, _message: &Message, _window: &Window, _proxy: &EventLoopProxy<Message>) -> bool {
         false
     }
     fn draw(&mut self, canvas: &mut Canvas<OpenGl>);

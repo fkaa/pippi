@@ -1,4 +1,4 @@
-use femtovg::{Canvas, Color, FontId, Paint, renderer::OpenGl};
+use femtovg::{Canvas, Color, Paint, renderer::OpenGl};
 
 use crate::{Message, ui::{FONT_ROBOTO_BOLD, FONT_ROBOTO_LIGHT, FONT_ROBOTO_REGULAR, Fonts, UiWindow}};
 
@@ -41,7 +41,7 @@ impl UiWindow for WelcomeWindow {
         WelcomeWindow { fonts }
     }
 
-    fn on_message(&mut self, message: &crate::Message, window: &winit::window::Window, proxy: &winit::event_loop::EventLoopProxy<crate::Message>) -> bool {
+    fn on_message(&mut self, message: &crate::Message, window: &winit::window::Window, _proxy: &winit::event_loop::EventLoopProxy<crate::Message>) -> bool {
         let Message::Disk(disk) = message else {
 return false;
         };

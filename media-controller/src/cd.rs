@@ -16,8 +16,8 @@ pub struct DiscMetadata {
 
 #[derive(Debug, Clone)]
 pub struct Track {
-    title: String,
-    lyrics: Option<Lyrics>,
+    pub title: String,
+    pub lyrics: Option<Lyrics>,
 }
 
 pub enum CdInfo {
@@ -42,7 +42,7 @@ impl CdMetadataFetcher {
         
         thread::spawn(move || {
             let mut client = MusicBrainzClient::default();
-            client.set_user_agent("pippi/0.0.1 ()");
+            client.set_user_agent("pippi/0.0.1 ()").unwrap();
             client.coverart_archive_url = "http://coverartarchive.org".into();
 
             let fetcher = CdMetadataFetcher { cache_dir, client };
@@ -60,7 +60,7 @@ impl CdMetadataFetcher {
     pub fn fetch_cd_metadata(&self, disc_id: &str) -> Option<DiscMetadata> {
         let query = Discid::fetch().id(disc_id).execute_with_client(&self.client).ok()?;
         let release = query.releases.clone().unwrap()[0].clone();
-        let cover = release.get_coverart().execute_with_client(&self.client).ok()?;
+        let _cover = release.get_coverart().execute_with_client(&self.client).ok()?;
 
         None
     }

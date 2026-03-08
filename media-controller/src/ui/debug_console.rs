@@ -1,4 +1,4 @@
-use femtovg::{Canvas, Color, FontId, Paint, renderer::OpenGl};
+use femtovg::{Canvas, Color, Paint, renderer::OpenGl};
 use winit::event_loop::EventLoopProxy;
 use winit::window::Window;
 
@@ -14,7 +14,7 @@ pub struct DebugConsoleWindow {
 
 impl UiWindow for DebugConsoleWindow {
     fn draw(&mut self, canvas: &mut Canvas<OpenGl>) {
-        let w = canvas.width() as f32;
+        let _w = canvas.width() as f32;
         let h = canvas.height() as f32;
         canvas.clear_rect(0, 0, canvas.width(), canvas.height(), Color::black());
         let paint = Paint::color(Color::white())
@@ -36,7 +36,7 @@ impl UiWindow for DebugConsoleWindow {
         }
     }
 
-    fn on_message(&mut self, message: &Message, window: &Window, proxy: &EventLoopProxy<Message>) -> bool {
+    fn on_message(&mut self, message: &Message, _window: &Window, _proxy: &EventLoopProxy<Message>) -> bool {
         self.messages.push(message.clone());
         false
     }

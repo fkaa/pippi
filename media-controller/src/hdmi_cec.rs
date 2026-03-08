@@ -1,4 +1,3 @@
-use cec_rs::{CecConnectionCfgBuilder, CecDeviceType, CecDeviceTypeVec, CecLogicalAddress};
 use std::io;
 use std::io::Write;
 use std::process::Command;
