@@ -17,3 +17,5 @@ mio = "1.1.1"
 raw-window-handle = "0.6.2"
 udev = { version = "0.9.3", features = ["mio"] }
 winit = "0.30.12"
+musicbrainz_rs = { version = "0.12.0", default-features = false, features = ["blocking", "rustls"] }
+lrc = { git = "https://github.com/fkaa/lrc" }

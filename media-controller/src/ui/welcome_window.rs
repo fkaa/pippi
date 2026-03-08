@@ -47,7 +47,7 @@ return false;
         };
 
         match disk {
-            crate::dvd_monitor::DiskReaderEvent::Inserted { is_audio } => {
+            crate::dvd_monitor::DiskReaderEvent::Inserted(..) => {
                 window.set_visible(false);
             },
             crate::dvd_monitor::DiskReaderEvent::Ejected => {

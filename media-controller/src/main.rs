@@ -1,4 +1,5 @@
 use std::default;
+use std::path::PathBuf;
 use std::sync::mpsc::{self, Sender};
 use std::time::Duration;
 use std::{collections::HashMap, thread};
@@ -28,6 +29,8 @@ use winit::{
     Enigo, Key, Keyboard, Mouse, Settings,
 };
 
+use crate::cd::{CdMetadataFetcher, DiscMetadata};
+use crate::dvd_monitor::DiskType;
 use crate::ui::debug_console::DebugConsoleWindow;
 use crate::ui::prompt_window::PromptWindow;
 use crate::ui::welcome_window::WelcomeWindow;
@@ -49,6 +52,7 @@ pub enum Message {
         current_choice: i32,
     },
     ListPromptChosen(i32),
+    DiskMetadata(Option<DiscMetadata>)
 }
 
 enum WindowPos {
@@ -103,11 +107,14 @@ struct MediaControlApp {
     vlc_tx: Sender<MediaCommand>,
     proxy: EventLoopProxy<Message>,
     enigo: Enigo,
+    metadata_tx: Sender<String>,
 }
 
 impl MediaControlApp {
     fn new(vlc_tx: Sender<MediaCommand>, proxy: EventLoopProxy<Message>) -> Self {
         let mut enigo = Enigo::new(&Settings::default()).unwrap();
+
+        let metadata_tx = CdMetadataFetcher::with_cache_dir(PathBuf::from("./cache"), proxy.clone());
 
         Self {
             windows: Default::default(),
@@ -117,6 +124,7 @@ impl MediaControlApp {
             vlc_tx,
             proxy,
             enigo,
+            metadata_tx
         }
     }
 
@@ -146,12 +154,12 @@ impl MediaControlApp {
 
 impl ApplicationHandler<Message> for MediaControlApp {
     fn resumed(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
-        /*self.debug_window =
+        self.debug_window =
             self.add_window::<DebugConsoleWindow>(event_loop, (300, 400), WindowPos::TopLeft);
         self.welcome_window =
             self.add_window::<WelcomeWindow>(event_loop, (500, 120), WindowPos::Center);
         self.prompt_window =
-            self.add_window::<PromptWindow>(event_loop, (400, 160), WindowPos::Bottom);*/
+            self.add_window::<PromptWindow>(event_loop, (400, 160), WindowPos::Bottom);
     }
 
     fn window_event(
@@ -193,7 +201,13 @@ impl ApplicationHandler<Message> for MediaControlApp {
 
         use ir_remote_monitor::RemoteButton;
         match event {
-            Message::Disk(DiskReaderEvent::Inserted { .. }) => {
+            Message::Disk(DiskReaderEvent::Inserted(disk)) => {
+                match disk {
+                    DiskType::Dvd => todo!(),
+                    DiskType::Cd { disc_id } => {
+                        
+                    },
+                }
                 // let cd_info = cd::scan();
                 self.vlc_tx
                     .send(MediaCommand::StartMedia {
@@ -220,22 +234,22 @@ impl ApplicationHandler<Message> for MediaControlApp {
 }
 
 fn main() {
-    let mut vlc = vlc::vlc();
+    /*let mut vlc = vlc::vlc();
 
     dbg!(vlc.is_playing());
     dbg!(vlc.enqueue("file:///home/tmtu/dev/clown-escape/clown-escape/assets/sfx/rats.wav"));
     dbg!(vlc.toggle_play());
     dbg!(vlc.is_playing());
 
-    loop{}
-    /*
+    loop{}*/
+    
     let (tx, rx) = mpsc::channel();
     dvd_monitor::monitor_disk_reader(tx.clone());
     //ir_remote_monitor::monitor_remote(tx.clone());
 
     let vlc_tx: Sender<MediaCommand> = vlc::start_controller(tx.clone());
 
-    tx.send(Message::Disk(DiskReaderEvent::Inserted { is_audio: false }));
+    tx.send(Message::Disk(DiskReaderEvent::Inserted(DiskType::Cd { disc_id: "VWZknAOJGo_RCbXvLKoOO.SwIaE-".into() })));
     tx.send(Message::SetPrompt {
         prompt: "Vill du börja där du slutade?".into(),
     });
@@ -257,5 +271,5 @@ fn main() {
     let proxy = event_loop.create_proxy();
 
     let mut app = MediaControlApp::new(vlc_tx, proxy);
-    event_loop.run_app(&mut app).unwrap();*/
+    event_loop.run_app(&mut app).unwrap();
 }

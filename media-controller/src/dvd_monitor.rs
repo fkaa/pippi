@@ -7,8 +7,14 @@ use std::thread;
 use crate::Message;
 
 #[derive(Debug, Clone)]
+pub enum DiskType {
+    Dvd,
+    Cd { disc_id: String }
+}
+
+#[derive(Debug, Clone)]
 pub enum DiskReaderEvent {
-    Inserted { is_audio: bool },
+    Inserted(DiskType),
     Ejected,
 }
 
@@ -48,7 +54,7 @@ pub fn poll(mut socket: udev::MonitorSocket, sender: mpsc::Sender<Message>) -> i
                     }
                     if change.is_some() {
                         sender
-                            .send(Message::Disk(DiskReaderEvent::Inserted { is_audio: false }))
+                            .send(Message::Disk(DiskReaderEvent::Inserted(DiskType::Dvd)))
                             .unwrap();
                     }
                 }
