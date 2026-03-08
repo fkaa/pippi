@@ -1,5 +1,6 @@
 use femtovg::{Canvas, Color, FontId, Paint, renderer::OpenGl};
 use winit::event_loop::EventLoopProxy;
+use winit::window::Window;
 
 use crate::{
     Message,
@@ -35,7 +36,7 @@ impl UiWindow for DebugConsoleWindow {
         }
     }
 
-    fn on_message(&mut self, message: &Message, proxy: &EventLoopProxy<Message>) -> bool {
+    fn on_message(&mut self, message: &Message, window: &Window, proxy: &EventLoopProxy<Message>) -> bool {
         self.messages.push(message.clone());
         false
     }

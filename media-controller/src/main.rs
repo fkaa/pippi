@@ -146,12 +146,12 @@ impl MediaControlApp {
 
 impl ApplicationHandler<Message> for MediaControlApp {
     fn resumed(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
-        self.debug_window =
+        /*self.debug_window =
             self.add_window::<DebugConsoleWindow>(event_loop, (300, 400), WindowPos::TopLeft);
         self.welcome_window =
             self.add_window::<WelcomeWindow>(event_loop, (500, 120), WindowPos::Center);
         self.prompt_window =
-            self.add_window::<PromptWindow>(event_loop, (400, 160), WindowPos::Bottom);
+            self.add_window::<PromptWindow>(event_loop, (400, 160), WindowPos::Bottom);*/
     }
 
     fn window_event(
@@ -220,6 +220,15 @@ impl ApplicationHandler<Message> for MediaControlApp {
 }
 
 fn main() {
+    let mut vlc = vlc::vlc();
+
+    dbg!(vlc.is_playing());
+    dbg!(vlc.enqueue("file:///home/tmtu/dev/clown-escape/clown-escape/assets/sfx/rats.wav"));
+    dbg!(vlc.toggle_play());
+    dbg!(vlc.is_playing());
+
+    loop{}
+    /*
     let (tx, rx) = mpsc::channel();
     dvd_monitor::monitor_disk_reader(tx.clone());
     //ir_remote_monitor::monitor_remote(tx.clone());
@@ -248,5 +257,5 @@ fn main() {
     let proxy = event_loop.create_proxy();
 
     let mut app = MediaControlApp::new(vlc_tx, proxy);
-    event_loop.run_app(&mut app).unwrap();
+    event_loop.run_app(&mut app).unwrap();*/
 }

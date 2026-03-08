@@ -59,7 +59,7 @@ fn vlc_loop(rx: mpsc::Receiver<MediaCommand>) {
     }
 }
 
-fn vlc() -> VlcPipe {
+pub fn vlc() -> VlcPipe {
     let mut proc = Command::new("vlc")
         .args(&["-I", "cli", "--lua-config", "cli={host='localhost:4212'}"])
         .spawn()
@@ -75,7 +75,7 @@ fn vlc() -> VlcPipe {
     pipe
 }
 
-struct VlcPipe {
+pub struct VlcPipe {
     writer: TcpStream,
     reader: BufReader<TcpStream>,
     line: String,
@@ -83,27 +83,34 @@ struct VlcPipe {
 
 impl VlcPipe {
     pub fn new(writer: TcpStream, reader: BufReader<TcpStream>) -> VlcPipe {
-        VlcPipe {
+        let mut pipe = VlcPipe {
             writer,
             reader,
             line: String::default(),
-        }
+        };
+
+        pipe.read_line();
+        pipe.read_line();
+
+        println!("read prompt");
+
+        pipe
     }
 
     pub fn toggle_play(&mut self) {
-        self.writer.write_all(b"pause").unwrap();
-        self.read_line();
+        self.writer.write_all(b"pause\n").unwrap();
+        //self.read_line();
     }
     pub fn clear(&mut self) {
-        self.writer.write_all(b"clear").unwrap();
+        self.writer.write_all(b"clear\n").unwrap();
         self.read_line();
     }
     pub fn play(&mut self) {
-        self.writer.write_all(b"play").unwrap();
+        self.writer.write_all(b"play\n").unwrap();
         self.read_line();
     }
     pub fn pause(&mut self) {
-        self.writer.write_all(b"pause").unwrap();
+        self.writer.write_all(b"pause\n").unwrap();
         self.read_line();
     }
     pub fn seek(&mut self, seconds: i32) {
@@ -124,24 +131,22 @@ impl VlcPipe {
     }
     pub fn enqueue(&mut self, media: &str) {
         write!(&mut self.writer, "enqueue {}\n", media).unwrap();
-        self.read_line();
-        self.read_line();
     }
 
     pub fn is_playing(&mut self) -> bool {
-        self.writer.write_all(b"is_playing").unwrap();
+        self.writer.write_all(b"is_playing\n").unwrap();
         self.read_line();
         self.line == "1"
     }
     pub fn get_duration(&mut self) -> Duration {
-        self.writer.write_all(b"get_length").unwrap();
+        self.writer.write_all(b"get_length\n").unwrap();
         self.read_line();
         let seconds = self.line.parse::<u32>().unwrap();
 
         Duration::from_secs(seconds as _)
     }
     pub fn get_time(&mut self) -> Duration {
-        self.writer.write_all(b"get_time").unwrap();
+        self.writer.write_all(b"get_time\n").unwrap();
         self.read_line();
         let seconds = self.line.parse::<u32>().unwrap();
 
@@ -152,6 +157,7 @@ impl VlcPipe {
         loop {
             self.line.clear();
             self.reader.read_line(&mut self.line).unwrap();
+            println!("$ReadVlc: {:?}", self.line);
             if !self.line.starts_with("status_change") {
                 break;
             }
