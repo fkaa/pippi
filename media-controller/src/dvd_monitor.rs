@@ -1,3 +1,4 @@
+use discid::{DiscId, Features};
 use mio::{Events, Interest, Poll, Token};
 
 use std::io;
@@ -53,9 +54,15 @@ pub fn poll(mut socket: udev::MonitorSocket, sender: mpsc::Sender<Message>) -> i
                             .unwrap();
                     }
                     if change.is_some() {
-                        sender
-                            .send(Message::Disk(DiskReaderEvent::Inserted(DiskType::Dvd)))
-                            .unwrap();
+                        let disc = DiscId::read_features(None, Features::ISRC);
+
+                        if let Ok(disc) = disc {
+                            sender
+                                .send(Message::Disk(DiskReaderEvent::Inserted(DiskType::Cd {
+                                    disc_id: disc.id(),
+                                })))
+                                .unwrap();
+                        }
                     }
                 }
             }

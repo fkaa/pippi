@@ -1,5 +1,8 @@
 use std::{
-    fmt, fs, path::PathBuf, sync::mpsc::{Receiver, Sender, channel}, thread
+    fmt, fs,
+    path::PathBuf,
+    sync::mpsc::{Receiver, Sender, channel},
+    thread,
 };
 
 use lrc::Lyrics;
@@ -17,6 +20,7 @@ use crate::Message;
 pub struct DiscMetadata {
     pub title: String,
     pub artist: String,
+    #[serde(skip)]
     pub cover: Option<Vec<u8>>,
     pub tracks: Vec<Track>,
 }
@@ -30,11 +34,11 @@ pub struct Track {
 impl fmt::Debug for DiscMetadata {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("DiscMetadata")
-        .field("title", &self.title)
-        .field("artist", &self.artist)
-        //.field("cover", &self.cover)
-        //.field("tracks", &self.tracks)
-        .finish()
+            .field("title", &self.title)
+            .field("artist", &self.artist)
+            //.field("cover", &self.cover)
+            //.field("tracks", &self.tracks)
+            .finish()
     }
 }
 
@@ -85,11 +89,21 @@ impl CdMetadataFetcher {
 
     pub fn fetch_cd_metadata(&self, disc_id: &str) -> Option<DiscMetadata> {
         let mut cache_file = self.cache_dir.clone();
+        let mut cover_file = self.cache_dir.clone();
         cache_file.push(format!("{}.json", disc_id));
+        cover_file.push(format!("{}.jpeg", disc_id));
+
+        let cover = if fs::exists(&cover_file).unwrap() {
+            Some(fs::read(&cover_file).unwrap())
+        } else {
+            None
+        };
 
         if fs::exists(&cache_file).unwrap() {
             println!("Found cached file for {disc_id}");
-            let meta = serde_json::from_str(&fs::read_to_string(&cache_file).unwrap()).unwrap();
+            let mut meta: DiscMetadata =
+                serde_json::from_str(&fs::read_to_string(&cache_file).unwrap()).unwrap();
+            meta.cover = cover;
             return Some(meta);
         }
 
@@ -105,11 +119,10 @@ impl CdMetadataFetcher {
                 return None;
             }
         };
+
         let release = query.releases.clone().unwrap()[0].clone();
-        // dbg!(&release);
         let title = release.title.clone();
         let artist = release.artist_credit.as_ref().unwrap()[0].name.clone();
-
         let media = release.media.as_ref().unwrap()[0].clone();
 
         let tracks = media
@@ -136,10 +149,18 @@ impl CdMetadataFetcher {
             .into_iter()
             .map(|(title, artist, duration)| {
                 let lyrics = self.fetch_lyrics(
-                    &title.to_lowercase(),
+                    &title,
                     &release.title.to_lowercase(),
                     &artist.to_lowercase(),
                     duration,
+                );
+
+                println!(
+                    "Got lyrics for '{}'/'{}'/'{}: {}",
+                    title,
+                    release.title,
+                    artist,
+                    lyrics.is_some()
                 );
 
                 Track {
@@ -149,51 +170,72 @@ impl CdMetadataFetcher {
             })
             .collect::<Vec<_>>();
 
-        let cover = match release.get_coverart().execute_with_client(&self.client) {
-            Ok(cover) => cover,
-            Err(e) => {
-                eprintln!("Failed to fetch disc cover: {e:?}");
-                return None;
-            }
-        };
-
-        let front = if let CoverartResponse::Json(json) = cover {
-            json.images
-                .iter()
-                .filter_map(|i| {
-                    if i.front == true {
-                        Some(i.thumbnails.clone())
-                    } else {
-                        None
-                    }
-                })
-                .next()
-        } else {
-            None
-        };
-        dbg!(&front);
-
-        let cover = front.and_then(|t| t.large).and_then(|url| {
-            ureq::get(url)
-                .call()
-                .ok()
-                .and_then(|mut r| r.body_mut().read_to_vec().ok())
-        });
-
-        let mut cache_file = self.cache_dir.clone();
-        let _ = fs::create_dir(&cache_file);
-
-        cache_file.push(format!("{}.json", disc_id));
-
-        let meta = DiscMetadata {
+        let mut meta = DiscMetadata {
             title,
             artist,
             cover,
             tracks,
         };
 
+        if meta.cover.is_none() {
+            let cover = match release.get_coverart().execute_with_client(&self.client) {
+                Ok(cover) => cover,
+                Err(e) => {
+                    eprintln!("Failed to fetch disc cover: {e:?}");
+                    return Some(meta);
+                }
+            };
+
+            let front = if let CoverartResponse::Json(json) = cover {
+                json.images
+                    .iter()
+                    .filter_map(|i| {
+                        if i.front == true {
+                            Some(i.thumbnails.clone())
+                        } else {
+                            None
+                        }
+                    })
+                    .next()
+            } else {
+                None
+            };
+            dbg!(&front);
+
+            if let Some(cover) = front {
+                if let Some(url) = cover.large {
+                    println!("Fetching '{}'", url);
+                    let resp = ureq::get(&url).call();
+                    match resp {
+                        Ok(mut resp) => {
+                            meta.cover = resp.body_mut().read_to_vec().ok();
+                        }
+                        Err(e) => {
+                            eprintln!("Error fetching '{}': {:?}", url, e);
+                        }
+                    }
+                }
+            }
+
+            if meta.cover.is_none() {
+                return Some(meta);
+            }
+        }
+
+        let mut cover_file = self.cache_dir.clone();
+
+        let mut cache_file = self.cache_dir.clone();
+        let _ = fs::create_dir(&cache_file);
+
+        cache_file.push(format!("{}.json", disc_id));
+        cover_file.push(format!("{}.jpeg", disc_id));
+
         let json = serde_json::to_string(&meta).unwrap();
         fs::write(cache_file, &json).unwrap();
+
+        let cover = meta.cover.as_ref().unwrap();
+
+        fs::write(cover_file, &cover).unwrap();
 
         Some(meta)
     }
@@ -207,17 +249,31 @@ impl CdMetadataFetcher {
     ) -> Option<Lyrics> {
         let mut db = Connection::open(&self.lyrics_db_path).unwrap();
         let mut stmt = db
-            .prepare("SELECT t.id, t.duration, l.synced_lyrics FROM tracks t INNER JOIN lyrics l ON l.track_id = t.id WHERE t.name_lower = ?1 AND t.album_name_lower = ?2 AND t.artist_name_lower = ?3")
+            .prepare("SELECT t.id, t.duration, l.synced_lyrics FROM tracks t INNER JOIN lyrics l ON l.track_id = t.id WHERE (t.name_lower = ?1 OR t.name = ?2 OR t.name_lower = ?3) AND t.album_name_lower = ?4 AND t.artist_name_lower = ?5")
             .unwrap();
 
+        let norm_track = track
+            .chars()
+            .filter(|c| c.is_alphanumeric() || c.is_whitespace() || *c == '\'')
+            .collect::<String>();
+
         let data = stmt
-            .query_map(params![track, album, artist], |row| {
-                Ok((
-                    row.get::<_, i64>(0).unwrap(),
-                    row.get::<_, f64>(1).unwrap(),
-                    row.get::<_, String>(2).unwrap(),
-                ))
-            })
+            .query_map(
+                params![
+                    track.to_lowercase(),
+                    track,
+                    norm_track.to_lowercase(),
+                    album,
+                    artist
+                ],
+                |row| {
+                    Ok((
+                        row.get::<_, i64>(0).unwrap(),
+                        row.get::<_, f64>(1).unwrap(),
+                        row.get::<_, String>(2).unwrap(),
+                    ))
+                },
+            )
             .unwrap()
             .collect::<Result<Vec<(i64, f64, String)>, _>>()
             .unwrap();

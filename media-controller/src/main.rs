@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Sender};
 use std::thread;
+use std::time::Duration;
 
 mod cd;
 mod dvd_monitor;
@@ -48,6 +49,12 @@ pub enum Message {
     },
     ListPromptChosen(i32),
     DiskMetadata(Option<DiscMetadata>),
+    PlayerState {
+        current_track: i32,
+        position: Duration,
+        duration: Duration,
+    },
+    PollPlayerState,
 }
 
 enum WindowPos {
@@ -215,6 +222,9 @@ impl ApplicationHandler<Message> for MediaControlApp {
                     })
                     .unwrap();
             }
+            Message::PollPlayerState => {
+                self.vlc_tx.send(MediaCommand::Poll).unwrap();
+            }
             Message::Disk(DiskReaderEvent::Inserted(disk)) => {
                 match disk {
                     DiskType::Dvd => todo!(),
@@ -258,10 +268,10 @@ fn main() {
 
     let vlc_tx: Sender<MediaCommand> = vlc::start_controller(tx.clone());
 
-    tx.send(Message::Disk(DiskReaderEvent::Inserted(DiskType::Cd {
+    /*tx.send(Message::Disk(DiskReaderEvent::Inserted(DiskType::Cd {
         disc_id: "VWZknAOJGo_RCbXvLKoOO.SwIaE-".into(),
     })))
-    .unwrap();
+    .unwrap();*/
     // tx.send(Message::SetPrompt {
     //     prompt: "Vill du börja där du slutade?".into(),
     // }).unwrap();
@@ -273,6 +283,16 @@ fn main() {
     event_loop.set_control_flow(ControlFlow::Poll);
 
     let proxy = event_loop.create_proxy();
+
+    {
+        let proxy = proxy.clone();
+        thread::spawn(move || {
+            loop {
+                thread::sleep(Duration::from_millis(500));
+                proxy.send_event(Message::PollPlayerState).unwrap();
+            }
+        });
+    }
 
     thread::spawn(move || {
         while let Ok(msg) = rx.recv() {
