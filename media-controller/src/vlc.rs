@@ -179,7 +179,7 @@ impl VlcPipe {
 
         self.writer.write_all(b"is_playing\n").unwrap();
         self.read_line();
-        self.line == "1"
+        self.line.trim_end() == "1"
     }
     pub fn get_duration(&mut self) -> Duration {
         self.read_prompt();
@@ -210,10 +210,10 @@ impl VlcPipe {
             println!("MD: {:?}", self.line);
 
             if let Some((_, n)) = self.line.split_once("| track_number: ") {
-                metadata.track_number = n.trim_end().parse::<i32>().unwrap();
+                metadata.track_number = n.trim_end().parse::<i32>().unwrap() - 1;
             }
 
-            if self.line == "+----[ end of stream info ]" {
+            if self.line == "+----[ end of stream info ]\r\n" {
                 break;
             }
         }

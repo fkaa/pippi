@@ -127,7 +127,7 @@ impl UiWindow for LyricsApp {
             .with_text_align(Align::Center)
             .with_text_baseline(Baseline::Middle);
 
-        let closest_lines = get_closest_lines(self.current_time, lyrics);
+        let closest_lines = get_closest_lines(self.current_time + 2.0, lyrics);
 
         let middle = closest_lines.len() / 2;
 
@@ -137,7 +137,7 @@ impl UiWindow for LyricsApp {
                 .fill_text(
                     x,
                     y,
-                    line,
+                    if line.len() == 0 { " " } else { line },
                     &paint.clone().with_color(Color::hsla(1.0, 1.0, 1.0, a)),
                 )
                 .unwrap();
@@ -226,7 +226,7 @@ fn get_closest_lines(current_time: f32, lyrics: &lrc::Lyrics) -> Vec<(bool, Stri
         let i = lines.len() - i - 1;
         let (t, l) = &lines[i];
         let t = t.get_timestamp() as f32 / 1000.0;
-        if current_time >= t {
+        if current_time>= t {
             start_idx = i;
             break;
         }
