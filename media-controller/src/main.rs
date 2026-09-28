@@ -166,14 +166,14 @@ impl MediaControlApp {
 
 impl ApplicationHandler<Message> for MediaControlApp {
     fn resumed(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
-        // self.debug_window =
-        //     self.add_window::<DebugConsoleWindow>(event_loop, (300, 400), WindowPos::TopLeft);
-        // self.welcome_window =
-        //     self.add_window::<WelcomeWindow>(event_loop, (500, 120), WindowPos::Center);
-        // self.prompt_window =
-        //     self.add_window::<PromptWindow>(event_loop, (400, 160), WindowPos::Bottom);
-        self.lyrics_app =
-            self.add_window::<LyricsApp>(event_loop, (1280, 1024), WindowPos::TopLeft);
+         //self.debug_window =
+          //   self.add_window::<DebugConsoleWindow>(event_loop, (300, 400), WindowPos::TopLeft);
+        self.welcome_window =
+             self.add_window::<WelcomeWindow>(event_loop, (500, 120), WindowPos::Center);
+         //self.prompt_window =
+             //self.add_window::<PromptWindow>(event_loop, (400, 160), WindowPos::Bottom);
+        //self.lyrics_app =
+        //    self.add_window::<LyricsApp>(event_loop, (1280, 1024), WindowPos::TopLeft);
     }
 
     fn window_event(
@@ -227,7 +227,13 @@ impl ApplicationHandler<Message> for MediaControlApp {
             }
             Message::Disk(DiskReaderEvent::Inserted(disk)) => {
                 match disk {
-                    DiskType::Dvd => todo!(),
+                    DiskType::Dvd => {
+                        self.vlc_tx
+                            .send(MediaCommand::StartMedia {
+                                path: "dvd:///dev/sr0".into(),
+                            })
+                            .unwrap();
+                    },
                     DiskType::Cd { disc_id } => {
                         self.metadata_tx.send(disc_id).unwrap();
                     }

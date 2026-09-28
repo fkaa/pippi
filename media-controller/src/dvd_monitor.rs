@@ -62,6 +62,10 @@ pub fn poll(mut socket: udev::MonitorSocket, sender: mpsc::Sender<Message>) -> i
                                     disc_id: disc.id(),
                                 })))
                                 .unwrap();
+                        } else {
+                            sender
+                                .send(Message::Disk(DiskReaderEvent::Inserted(DiskType::Dvd)))
+                                .unwrap();
                         }
                     }
                 }
