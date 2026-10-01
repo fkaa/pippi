@@ -11,7 +11,7 @@ mod ui;
 mod vlc;
 
 use dvd_monitor::DiskReaderEvent;
-use enigo::{Enigo, Settings};
+use enigo::{Direction, Enigo, Key, Keyboard, Settings};
 use glutin::prelude::PossiblyCurrentGlContext;
 use glutin::surface::GlSurface;
 use vlc::MediaCommand;
@@ -166,12 +166,12 @@ impl MediaControlApp {
 
 impl ApplicationHandler<Message> for MediaControlApp {
     fn resumed(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
-         //self.debug_window =
-          //   self.add_window::<DebugConsoleWindow>(event_loop, (300, 400), WindowPos::TopLeft);
+        //self.debug_window =
+        //   self.add_window::<DebugConsoleWindow>(event_loop, (300, 400), WindowPos::TopLeft);
         self.welcome_window =
-             self.add_window::<WelcomeWindow>(event_loop, (500, 120), WindowPos::Center);
-         //self.prompt_window =
-             //self.add_window::<PromptWindow>(event_loop, (400, 160), WindowPos::Bottom);
+            self.add_window::<WelcomeWindow>(event_loop, (500, 120), WindowPos::Center);
+        //self.prompt_window =
+        //self.add_window::<PromptWindow>(event_loop, (400, 160), WindowPos::Bottom);
         //self.lyrics_app =
         //    self.add_window::<LyricsApp>(event_loop, (1280, 1024), WindowPos::TopLeft);
     }
@@ -203,7 +203,10 @@ impl ApplicationHandler<Message> for MediaControlApp {
 
         let mut event_handled = false;
         for window in &mut self.windows {
-            if window.app.on_message(&event, &*window.window, &mut window.canvas, &self.proxy) {
+            if window
+                .app
+                .on_message(&event, &*window.window, &mut window.canvas, &self.proxy)
+            {
                 event_handled = true;
                 break;
             }
@@ -233,7 +236,7 @@ impl ApplicationHandler<Message> for MediaControlApp {
                                 path: "dvd:///dev/sr0".into(),
                             })
                             .unwrap();
-                    },
+                    }
                     DiskType::Cd { disc_id } => {
                         self.metadata_tx.send(disc_id).unwrap();
                     }
@@ -243,16 +246,33 @@ impl ApplicationHandler<Message> for MediaControlApp {
             Message::Ir(RemoteButton::Star) => hdmi_cec::turn_tv_on(),
             Message::Ir(RemoteButton::Hash) => hdmi_cec::turn_tv_off(),
             Message::Ir(RemoteButton::Ok) => self.vlc_tx.send(MediaCommand::TogglePlay).unwrap(),
-            Message::Ir(RemoteButton::Up) => self.vlc_tx.send(MediaCommand::VolumeUp).unwrap(),
-            Message::Ir(RemoteButton::Down) => self.vlc_tx.send(MediaCommand::VolumeDown).unwrap(),
-            Message::Ir(RemoteButton::Left) => self
-                .vlc_tx
-                .send(MediaCommand::Seek { seconds: -15 })
-                .unwrap(),
-            Message::Ir(RemoteButton::Right) => self
-                .vlc_tx
-                .send(MediaCommand::Seek { seconds: 15 })
-                .unwrap(),
+            Message::Ir(RemoteButton::Number(0)) => {
+                self.enigo.key(Key::Return, Direction::Press).unwrap();
+            }
+            Message::Ir(RemoteButton::Up) => {
+                self.enigo.key(Key::UpArrow, Direction::Press).unwrap();
+                //self.vlc_tx.send(MediaCommand::VolumeUp).unwrap(),
+            }
+            Message::Ir(RemoteButton::Down) => {
+                self.enigo.key(Key::DownArrow, Direction::Press).unwrap();
+                //self.vlc_tx.send(MediaCommand::VolumeDown).unwrap()
+            }
+            Message::Ir(RemoteButton::Left) => {
+                self.enigo.key(Key::LeftArrow, Direction::Press).unwrap();
+
+                // self
+                // .vlc_tx
+                // .send(MediaCommand::Seek { seconds: -15 })
+                // .unwrap()
+            }
+            Message::Ir(RemoteButton::Right) => {
+                self.enigo.key(Key::RightArrow, Direction::Press).unwrap();
+
+                // self
+                // .vlc_tx
+                // .send(MediaCommand::Seek { seconds: 15 })
+                // .unwrap()
+            }
             _ => {}
         }
     }

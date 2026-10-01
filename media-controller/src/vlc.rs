@@ -77,11 +77,11 @@ fn vlc_loop(rx: mpsc::Receiver<MediaCommand>, sender: mpsc::Sender<Message>) {
 
 pub fn vlc() -> VlcPipe {
     let _proc = Command::new("vlc")
-        .args(&["-I", "cli", "--lua-config", "cli={host='localhost:4212'}"])
+        .args(&["-f", "-I", "cli", "--lua-config", "cli={host='localhost:4212'}"])
         .spawn()
         .expect("Failed to launch cvlc");
 
-    thread::sleep(std::time::Duration::from_secs(1));
+    thread::sleep(std::time::Duration::from_secs(2));
 
     let socket = TcpStream::connect("localhost:4212").unwrap();
     let reader = BufReader::new(socket.try_clone().unwrap());
@@ -202,12 +202,12 @@ impl VlcPipe {
             return metadata;
         }
 
-        println!("sending info");       
+        //println!("sending info");       
         self.writer.write_all(b"info\n").unwrap();
 
         loop {
             self.read_line();
-            println!("MD: {:?}", self.line);
+            // println!("MD: {:?}", self.line);
 
             if let Some((_, n)) = self.line.split_once("| track_number: ") {
                 metadata.track_number = n.trim_end().parse::<i32>().unwrap() - 1;
@@ -217,7 +217,7 @@ impl VlcPipe {
                 break;
             }
         }
-        println!("done getting info");
+        //println!("done getting info");
 
         metadata
     }
@@ -243,7 +243,7 @@ impl VlcPipe {
         loop {
             self.line.clear();
             self.reader.read_line(&mut self.line).unwrap();
-            println!("$ReadVlc: {:?}", self.line);
+            //println!("$ReadVlc: {:?}", self.line);
             if !self.line.starts_with("status_change") {
                 break;
             }
